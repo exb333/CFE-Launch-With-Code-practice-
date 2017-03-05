@@ -92,5 +92,7 @@ ENV/
 
 polls/migrations/*
 
-*.xml
+.idea/*
+.xml
+
 
