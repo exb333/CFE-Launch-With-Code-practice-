@@ -1,6 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, HttpResponseRedirect, Http404
 from .forms import EmailForm, JoinForm
 from .models import Join
+import uuid
 
 
 def get_ip(request):
@@ -15,6 +16,15 @@ def get_ip(request):
     return ip
 
 
+def get_ref_id():
+    ref_id = str(uuid.uuid4())[:11].replace('-', '').lower()
+    try:
+        id_exists = Join.objects.get(ref_id=ref_id)
+        get_ref_id()
+    except:
+        return ref_id
+
+
 def home(request):
     # Regular Forms
 
@@ -24,17 +34,40 @@ def home(request):
     # 	new_join, created = Join.objects.get_or_create(email=email)
 
     # Model Forms
+    try:
+        poll_id = request.session['ref']
+        obj = Join.objects.get(id=poll_id)
+    except:
+        obj = None
 
     form = JoinForm(request.POST or None)
     if form.is_valid():
         new_join = form.save(commit=False)
         email = form.cleaned_data['email']
         new_join_old, created = Join.objects.get_or_create(email=email)
-        new_join_old.ip_address = get_ip(request)
-        new_join_old.save()
-    # new_join.ip_address = get_ip(request)
-    # new_join.save()
+        if created:
+            new_join_old.ref_id = get_ref_id()
+            # adding referred friends
+            if not obj == None:
+                new_join_old.friend = obj
+            new_join_old.ip_address = get_ip(request)
+            new_join_old.save()
+            # new_join.ip_address = get_ip(request)
+            # new_join.save()
+        return HttpResponseRedirect("/%s" % (new_join_old.ref_id))
 
     context = {"form": form}
     templates = 'home.html'
     return render(request, templates, context)
+
+
+def share(request, ref_id):
+    try:
+        join_object = Join.objects.get(ref_id=ref_id)
+        obj = Join.objects.filter(friend = join_object)
+        count = obj.count()
+        context = {'ref_id': ref_id}
+        templates = 'share.html'
+        return render(request, templates, context)
+    except:
+        raise Http404
