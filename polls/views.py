@@ -64,9 +64,10 @@ def home(request):
 def share(request, ref_id):
     try:
         join_object = Join.objects.get(ref_id=ref_id)
-        obj = Join.objects.filter(friend = join_object)
-        count = obj.count()
-        context = {'ref_id': ref_id}
+        friends_referred = Join.objects.filter(friend = join_object)
+        count = join_object.referral.all().count()
+        ref_url = 'http://eliezerborde.com/?ref=%s' %(join_object.ref_id)
+        context = {'ref_id': join_object.ref_id, 'count':count, 'ref_url':ref_url}
         templates = 'share.html'
         return render(request, templates, context)
     except:
